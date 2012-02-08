@@ -1,36 +1,31 @@
-var http = require('http');
-var fs = require('fs');
+var http = require('http'),
+    fs = require('fs'),
+    step = require('step');
 
 var file_path = __dirname + '/cat.jpg';
-fs.stat(file_path, function (err, stat) {
+var file_size, file_content;
 
-    http.createServer(
-        function (request, response) {
-            console.log('new request');
+step(
+    function get_file_size() {
+        fs.stat(file_path, this);
+    },
+    function store_file_s(err, stat) {
+        file_size = stat.size;
+        this();
+    },
+    function read_file_into_memory() {
+       fs.readFile(file_path, this)
+    },
+    function create_server(err, file_content) {
+        http.createServer(function (eequest, response) {
+
             response.writeHead(200, {
                 'Content-Type':'image/jpeg',
-                'Content-Length':stat.size
+                'Content-Length': file_size
             });
 
-            var rs = fs.createReadStream(file_path);
-            rs.on('data', function (data) {
-                   var flushed = response.write(data);
-                    if (!flushed) {
-                        rs.pause();
-                    }
-                }
-            );
+            response.end(file_content)
 
-            response.on('drain', function() {
-                rs.resume();
-            });
-
-            rs.on('end', function () {
-                    response.end();
-                }
-            );
-
-        }).listen(9000);
-
-});
-
+        }).listen(9000);   
+    }
+);
